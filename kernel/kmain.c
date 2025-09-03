@@ -1,7 +1,8 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "kernel/drivers/vga.h"
-#include "kernel/core/log.h"
+#include "drivers/vga.h"
+#include "core/log.h"
+#include "drivers/serial.h"
 
 extern char __git_shortsha[]; /* Optional: linker-provided string */
 
