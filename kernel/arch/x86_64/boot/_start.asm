@@ -1,31 +1,71 @@
-; Minimal 64-bit entry compatible with Limine or GRUB when they transfer control to long mode.
-; Sets up a stack and calls kmain.
+; Set the architecture to 64-bit
+bits 64
 
-global _start
-extern _stack_top
+; The C function we will call
 extern kmain
 
+; Multiboot header (multiboot 2) so GRUB can recognize and load the kernel.
 section .multiboot_header
-align 4
-dd 0x1BADB002            ; Magic number
+header_start:
+    dd 0xe85250d6                ; magic
+    dd 0                         ; architecture (protected mode i386)
+    dd header_end - header_start ; header length
+    ; checksum
+    dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
 
-dd 0x0                   ; Flags
+    ; required tags
+    dw 0 ; end tag
+    dw 0 ; flags
+    dd 8 ; size
+header_end:
 
-dd -(0x1BADB002 + 0x0)   ; Checksum
+; Limine requires a stack, but it provides one for us. We just need to declare this
+; symbol so Limine can tell us its size and location. It's good practice to define
+; our own later, but for now this is fine.
+section .bss
+align 16
+stack_bottom:
+resb 4096 * 16 ; Reserve 16 pages for the stack
+stack_top:
 
-    .text
+; The Limine boot request. This tells Limine where to start our kernel.
+section .limine_req
+align 8
+limine_request:
+    ; Limine common magic and entry point request id (from limine.h)
+    dq 0xc7b1dd30df4c8b88, 0x0a82e883a194f07b  ; LIMINE_COMMON_MAGIC
+    dq 0x13d86c035a1cd3e1, 0x2b0caa89d8f3026a  ; LIMINE_ENTRY_POINT_REQUEST ID
+    dq 0                                    ; Revision
+
+    ; Response pointer (Limine will fill this)
+    dq 0
+
+    ; Entry point request fields
+    dq 0                                    ; placeholder for response pointer (unused)
+    dq _start                               ; The entry point for our kernel
+
+    ; End of requests (null tag)
+    dq 0, 0
+
+; The actual entry point of our kernel
+section .text
+global _start
 _start:
-    ; Clear direction flag
-    cld
+    ; Limine guarantees that the stack pointer (rsp) is already set up.
+    ; For now, we can trust it. We will set our own stack pointer later on.
+    ; mov rsp, stack_top  ; We can uncomment this if we want to use our own stack
 
-    ; Set up stack. We use a small stack in .bss; the linker will provide _stack_top.
-    mov rsp, _stack_top
+    ; Limine passes a pointer to the boot info structure in the rdi register.
+    ; We can save this for later, but for now, we don't need it.
 
-    ; Call C entry
+    ; Write directly to VGA buffer to confirm we are running
+    mov dword [0xB8000], 0x2A4B2A4F ; "OK" with green-on-yellow attribute
+
+    ; Call the C kernel's main function
     call kmain
 
-halt_loop:
-    hlt
-    jmp halt_loop
-
-; Reserve stack space symbol (defined in linker script as ORIGIN + size)
+    ; If kmain ever returns (it shouldn't), halt the system.
+halt:
+    cli ; Clear interrupts
+    hlt ; Halt the CPU
+    jmp halt

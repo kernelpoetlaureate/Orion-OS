@@ -14,7 +14,7 @@ static inline uint16_t make_entry(char c, uint8_t color) {
 void vga_init(void) {
     for (size_t y = 0; y < VGA_HEIGHT; ++y) {
         for (size_t x = 0; x < VGA_WIDTH; ++x) {
-            VGA_BUFFER[y * VGA_WIDTH + x] = make_entry(' ', 0x07);
+            VGA_BUFFER[y * VGA_WIDTH + x] = make_entry('X', 0x1F); // White text on blue background
         }
     }
     vga_row = 0; vga_col = 0;

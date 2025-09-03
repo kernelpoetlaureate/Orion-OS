@@ -13,7 +13,7 @@ KERNEL_ELF = $(BUILD_DIR)/kernel.elf
 DRIVER_OBJS = $(BUILD_DIR)/vga.o $(BUILD_DIR)/serial.o
 LIB_OBJS = $(BUILD_DIR)/printf.o
 
-ALL: $(KERNEL_ELF)
+all: $(KERNEL_ELF)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
@@ -45,21 +45,43 @@ debug: $(KERNEL_ELF)
 	@echo "Launching QEMU paused for GDB..."
 	qemu-system-x86_64 -s -S -kernel $(KERNEL_ELF) -serial stdio
 
-iso: $(KERNEL_ELF)
-	@echo "Creating ISO with GRUB..."
-	mkdir -p $(ISO_DIR)/boot/grub
-	cp $(KERNEL_ELF) $(ISO_DIR)/boot/kernel.elf
-	echo 'set timeout=0' > $(ISO_DIR)/boot/grub/grub.cfg
-	echo 'set default=0' >> $(ISO_DIR)/boot/grub/grub.cfg
-	echo 'menuentry "Orion OS" {' >> $(ISO_DIR)/boot/grub/grub.cfg
-	echo '  multiboot /boot/kernel.elf' >> $(ISO_DIR)/boot/grub/grub.cfg
-	echo '  boot' >> $(ISO_DIR)/boot/grub/grub.cfg
-	echo '}' >> $(ISO_DIR)/boot/grub/grub.cfg
-	grub-mkrescue -o $(BUILD_DIR)/orion.iso $(ISO_DIR)
+iso: $(BUILD_DIR)/orion.iso
+
+$(BUILD_DIR)/orion.iso: limine.cfg $(KERNEL_ELF) limine/limine-cd-efi.bin limine/limine.sys
+	@echo "Creating ISO directory..."
+	mkdir -p $(BUILD_DIR)/EFI/BOOT
+	cp limine.cfg $(BUILD_DIR)/
+	cp limine/limine-cd-efi.bin $(BUILD_DIR)/
+	cp limine/BOOTX64.EFI $(BUILD_DIR)/EFI/BOOT/
+	cp limine/limine.sys $(BUILD_DIR)/
+	@echo "Generating ISO..."
+	xorriso -as mkisofs -b limine-cd-efi.bin -no-emul-boot -boot-load-size 4 \
+		-boot-info-table --efi-boot EFI/BOOT/BOOTX64.EFI -o $(BUILD_DIR)/orion.iso $(BUILD_DIR)/ || true
+	@echo "Deploying Limine..."
+	limine/limine-deploy $(BUILD_DIR)/orion.iso
 
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf $(BUILD_DIR) $(ISO_DIR)
+
+# Build a GRUB ISO that loads the kernel via multiboot/ELF
+.PHONY: grub-iso
+grub-iso: $(KERNEL_ELF)
+	@echo "Creating GRUB ISO directory..."
+	mkdir -p $(BUILD_DIR)/grub_iso/boot/grub
+	cp $(KERNEL_ELF) $(BUILD_DIR)/grub_iso/kernel.elf
+	@echo "set timeout=5" > $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "menuentry 'Orion OS kernel.elf' {" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "  multiboot2 /kernel.elf" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "  boot" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "}" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "Generating GRUB ISO..."
+	grub-mkrescue -o $(BUILD_DIR)/grub-orion.iso $(BUILD_DIR)/grub_iso || true
+
+.PHONY: run-grub
+run-grub: grub-iso
+	@echo "Launching QEMU with GRUB ISO..."
+	qemu-system-x86_64 -drive file=$(BUILD_DIR)/grub-orion.iso,format=raw -serial stdio -no-reboot -no-shutdown
 
 lint:
 	@echo "Running lint checks..."
