@@ -1,1 +1,5 @@
-XWelcome to Orion OS
+Debug: CPUID eax=397233, ebx=2048, ecx=2147491841, edx=126614525
+Debug: CPUID eax=397233, ebx=2048, ecx=2147491841, edx=126614525
+Parent PID: 1, CPUID: 0
+Child PID: 2, CPUID: 0
+Welcome to Orion OS

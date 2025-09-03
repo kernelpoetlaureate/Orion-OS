@@ -1,6 +1,6 @@
 # Makefile for Orion OS
 
-CC = gcc
+CC = gcc -Ikernel
 AS = gcc
 LD = ld
 
@@ -12,6 +12,7 @@ KERNEL_ELF = $(BUILD_DIR)/kernel.elf
 
 DRIVER_OBJS = $(BUILD_DIR)/vga.o $(BUILD_DIR)/serial.o
 LIB_OBJS = $(BUILD_DIR)/printf.o
+CORE_OBJS = $(BUILD_DIR)/process.o
 
 all: $(KERNEL_ELF)
 
@@ -31,11 +32,14 @@ $(BUILD_DIR)/serial.o: kernel/drivers/serial.c | $(BUILD_DIR)
 $(BUILD_DIR)/printf.o: kernel/lib/printf.c | $(BUILD_DIR)
 	$(CC) -ffreestanding -c -g kernel/lib/printf.c -o $(BUILD_DIR)/printf.o
 
-$(KERNEL_ELF): $(KERNEL_OBJ) $(DRIVER_OBJS) $(LIB_OBJS) linker.ld kernel/arch/x86_64/boot/_start.asm
+$(BUILD_DIR)/process.o: kernel/core/process.c | $(BUILD_DIR)
+	$(CC) -ffreestanding -c -g kernel/core/process.c -o $(BUILD_DIR)/process.o
+
+$(KERNEL_ELF): $(KERNEL_OBJ) $(DRIVER_OBJS) $(LIB_OBJS) $(CORE_OBJS) linker.ld kernel/arch/x86_64/boot/_start.asm
 	@echo "Assembling entry..."
 	nasm -f elf64 kernel/arch/x86_64/boot/_start.asm -o $(BUILD_DIR)/start.o
 	@echo "Linking kernel ELF..."
-	ld -T linker.ld -o $(KERNEL_ELF) $(BUILD_DIR)/start.o $(KERNEL_OBJ) $(DRIVER_OBJS) $(LIB_OBJS)
+	ld -T linker.ld -o $(KERNEL_ELF) $(BUILD_DIR)/start.o $(KERNEL_OBJ) $(DRIVER_OBJS) $(LIB_OBJS) $(CORE_OBJS)
 
 run: iso
 	@echo "Launching QEMU with ISO..."

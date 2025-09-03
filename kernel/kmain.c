@@ -5,24 +5,35 @@
 #include "drivers/serial.h"
 #include "lib/include/libc.h"
 #include "core/io.h"
+#include "core/process.h"
 
 extern char __git_shortsha[]; /* Optional: linker-provided string */
 
-void kmain(void) {
-    // Write directly to VGA to show we're in kmain
-    *((volatile uint32_t*)0xb8010) = 0x2f4d2f4b; // "KM" in white on green (Kernel Main)
-    
-    serial_init();
-    
-    // Write directly to VGA after serial init
-    *((volatile uint32_t*)0xb8014) = 0x2f492f53; // "SI" in white on green (Serial Init)
-    
-    serial_putc('X');
-    
-    // Write to VGA after putc
-    *((volatile uint32_t*)0xb8018) = 0x2f582f58; // "XX" in white on green (after putc)
-
+// Parent process entry point
+void parent_process_entry(void) {
     printf("Welcome to Orion OS\n");
-
     for (;;) __asm__ volatile ("hlt");
+}
+
+void kmain(void) {
+    // Fetch the current CPU ID for the parent process
+    int parent_cpuid = get_current_cpuid();
+
+    // Create the parent process
+    Process parent_process = {
+        .name = "Parent Process",
+        .pid = 1,
+        .cpuid = parent_cpuid,
+        .entry_point = parent_process_entry
+    };
+
+    // Fork a child process
+    Process child_process = fork(&parent_process);
+
+    // Print PIDs and CPU IDs of both processes
+    printf("Parent PID: %d, CPUID: %d\n", parent_process.pid, parent_process.cpuid);
+    printf("Child PID: %d, CPUID: %d\n", child_process.pid, child_process.cpuid);
+
+    // Start the parent process
+    parent_process.entry_point();
 }
