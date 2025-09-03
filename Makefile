@@ -80,8 +80,28 @@ grub-iso: $(KERNEL_ELF)
 
 .PHONY: run-grub
 run-grub: grub-iso
-	@echo "Launching QEMU with GRUB ISO..."
-	qemu-system-x86_64 -drive file=$(BUILD_DIR)/grub-orion.iso,format=raw -serial stdio -no-reboot -no-shutdown
+	@echo "Launching QEMU with GRUB ISO and comprehensive logging..."
+	qemu-system-x86_64 \
+		-drive file=$(BUILD_DIR)/grub-orion.iso,format=raw \
+		-serial stdio \
+		-no-reboot \
+		-no-shutdown \
+		-d int,cpu_reset,guest_errors \
+		-D $(BUILD_DIR)/qemu.log \
+		2>&1 | tee $(BUILD_DIR)/qemu-output.log
+
+.PHONY: run-grub-debug
+run-grub-debug: grub-iso
+	@echo "Launching QEMU with GRUB ISO and full debugging..."
+	qemu-system-x86_64 \
+		-drive file=$(BUILD_DIR)/grub-orion.iso,format=raw \
+		-serial stdio \
+		-no-reboot \
+		-no-shutdown \
+		-d int,cpu_reset,guest_errors,exec,in_asm,out_asm,op,op_opt,op_ind \
+		-D $(BUILD_DIR)/qemu-debug.log \
+		-s -S \
+		2>&1 | tee $(BUILD_DIR)/qemu-debug-output.log
 
 lint:
 	@echo "Running lint checks..."
