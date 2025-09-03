@@ -5,6 +5,14 @@ global _start
 extern _stack_top
 extern kmain
 
+section .multiboot_header
+align 4
+dd 0x1BADB002            ; Magic number
+
+dd 0x0                   ; Flags
+
+dd -(0x1BADB002 + 0x0)   ; Checksum
+
     .text
 _start:
     ; Clear direction flag
