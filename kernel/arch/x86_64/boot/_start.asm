@@ -53,13 +53,13 @@ global _start
 _start:
     ; Limine guarantees that the stack pointer (rsp) is already set up.
     ; For now, we can trust it. We will set our own stack pointer later on.
-    ; mov rsp, stack_top  ; We can uncomment this if we want to use our own stack
+    mov rsp, stack_top  ; We can uncomment this if we want to use our own stack
 
     ; Limine passes a pointer to the boot info structure in the rdi register.
     ; We can save this for later, but for now, we don't need it.
 
-    ; Write directly to VGA buffer to confirm we are running
-    mov dword [0xB8000], 0x2A4B2A4F ; "OK" with green-on-yellow attribute
+    ; Align the stack to 16 bytes before calling kmain
+    sub rsp, 8
 
     ; Call the C kernel's main function
     call kmain

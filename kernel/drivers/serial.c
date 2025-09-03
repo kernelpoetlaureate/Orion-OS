@@ -29,8 +29,10 @@ void serial_putc(char c) {
 }
 
 void serial_write(const char *s) {
+    // Simple, robust serial string writer: converts \n to \r\n and writes bytes
     while (*s) {
         if (*s == '\n') serial_putc('\r');
-        serial_putc(*s++);
+        serial_putc(*s);
+        s++;
     }
 }

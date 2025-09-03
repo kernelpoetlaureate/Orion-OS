@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "include/libc.h"
 #include "../drivers/serial.h"
+#include "../drivers/vga.h"
 
 static void reverse(char *start, char *end) {
     while (start < end) {
@@ -98,9 +99,8 @@ int vsnprintf(char *out, size_t size, const char *fmt, va_list ap) {
                 break;
         }
     }
-
-    if (size) *out = '\0';
-    return (int)(out - start);
+    *out = '\0';
+    return out - start;
 }
 
 int snprintf(char *out, size_t size, const char *fmt, ...) {
@@ -120,4 +120,14 @@ void kprintf(const char *fmt, ...) {
     // Ensure serial is up
     serial_init();
     serial_write(buf);
+}
+
+int printf(const char *fmt, ...) {
+    char buf[1024];
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    serial_write(buf); // Output the formatted string to the serial port
+    return ret; // Return the number of characters written
 }
