@@ -21,6 +21,8 @@ void kmain(void) {
     
     // Write to VGA after putc
     *((volatile uint32_t*)0xb8018) = 0x2f582f58; // "XX" in white on green (after putc)
-    
+
+    printf("Welcome to Orion OS\n");
+
     for (;;) __asm__ volatile ("hlt");
 }
