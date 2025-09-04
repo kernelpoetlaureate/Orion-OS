@@ -30,7 +30,7 @@ static bool bitmap_test(size_t page_idx) {
 }
 
 void pmm_init(void) {
-    LOG_INFO("PMM: Initializing with fixed memory layout");
+    LOG_INFO("PMM: Starting initialization");
     LOG_INFO("PMM: Memory range: 0x%x - 0x%x", MEMORY_START, MEMORY_END);
 
     total_pages = (MEMORY_END - MEMORY_START) / PAGE_SIZE;
@@ -60,6 +60,7 @@ void pmm_init(void) {
 
     LOG_INFO("PMM: Initialized. Used pages: %u, Free pages: %u", 
              (unsigned)used_pages, (unsigned)(total_pages - used_pages));
+    LOG_INFO("PMM: Initialization complete");
 }
 
 void* pmm_alloc(void) {

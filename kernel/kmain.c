@@ -17,19 +17,29 @@ void parent_process_entry(void) {
 }
 
 void kmain(void) {
+    LOG_INFO("kmain: Starting kernel main function");
+
     // Fetch the current CPU ID for the parent process
     int parent_cpuid = get_current_cpuid();
 
+    LOG_INFO("kmain: Initializing serial output");
     serial_init();
 
+    // Initialize PMM first before creating processes
+    pmm_init();
+    pmm_run_tests();
+
+    LOG_INFO("kmain: Creating parent process");
     // Create the parent process
     Process parent_process = {
         .name = "Parent Process",
         .pid = 1,
         .cpuid = parent_cpuid,
-        .entry_point = parent_process_entry
+        .entry_point = parent_process_entry,
+        .stack_pointer = 0  // Parent uses kernel stack
     };
 
+    LOG_INFO("kmain: Forking child process");
     // Fork a child process
     Process child_process = fork(&parent_process);
 
@@ -38,9 +48,5 @@ void kmain(void) {
     printf("Child PID: %d, CPUID: %d\n", child_process.pid, child_process.cpuid);
 
     // Start the parent process
-    // Initialize PMM and run tests before handing off to processes
-    pmm_init();
-    pmm_run_tests();
-
     parent_process.entry_point();
 }
