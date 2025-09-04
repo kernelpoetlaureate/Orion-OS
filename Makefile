@@ -11,8 +11,10 @@ KERNEL_OBJ = $(BUILD_DIR)/kernel.o
 KERNEL_ELF = $(BUILD_DIR)/kernel.elf
 
 DRIVER_OBJS = $(BUILD_DIR)/vga.o $(BUILD_DIR)/serial.o
-LIB_OBJS = $(BUILD_DIR)/printf.o
+LIB_OBJS = $(BUILD_DIR)/printf.o $(BUILD_DIR)/mem.o
 CORE_OBJS = $(BUILD_DIR)/process.o
+CORE_OBJS += $(BUILD_DIR)/pmm.o
+CORE_OBJS += $(BUILD_DIR)/panic.o
 
 all: $(KERNEL_ELF)
 
@@ -32,8 +34,17 @@ $(BUILD_DIR)/serial.o: kernel/drivers/serial.c | $(BUILD_DIR)
 $(BUILD_DIR)/printf.o: kernel/lib/printf.c | $(BUILD_DIR)
 	$(CC) -ffreestanding -c -g kernel/lib/printf.c -o $(BUILD_DIR)/printf.o
 
+$(BUILD_DIR)/mem.o: kernel/lib/mem.c | $(BUILD_DIR)
+	$(CC) -ffreestanding -Ikernel/lib/include -c -g kernel/lib/mem.c -o $(BUILD_DIR)/mem.o
+
 $(BUILD_DIR)/process.o: kernel/core/process.c | $(BUILD_DIR)
 	$(CC) -ffreestanding -c -g kernel/core/process.c -o $(BUILD_DIR)/process.o
+
+$(BUILD_DIR)/pmm.o: kernel/core/pmm.c | $(BUILD_DIR)
+	$(CC) -ffreestanding -Ilimine -c -g kernel/core/pmm.c -o $(BUILD_DIR)/pmm.o
+
+$(BUILD_DIR)/panic.o: kernel/core/panic.c | $(BUILD_DIR)
+	$(CC) -ffreestanding -c -g kernel/core/panic.c -o $(BUILD_DIR)/panic.o
 
 $(KERNEL_ELF): $(KERNEL_OBJ) $(DRIVER_OBJS) $(LIB_OBJS) $(CORE_OBJS) linker.ld kernel/arch/x86_64/boot/_start.asm
 	@echo "Assembling entry..."

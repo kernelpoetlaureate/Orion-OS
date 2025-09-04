@@ -2,4 +2,11 @@ Debug: CPUID eax=397233, ebx=2048, ecx=2147491841, edx=126614525
 Debug: CPUID eax=397233, ebx=2048, ecx=2147491841, edx=126614525
 Parent PID: 1, CPUID: 0
 Child PID: 2, CPUID: 0
+[2] PMM: Initializing with fixed memory layout
+[2] PMM: Memory range: 0x100000 - 0x40000000
+[2] PMM: Total pages 261888, bitmap 32736 bytes
+[2] PMM: Placing bitmap at 0x0x300000
+[2] PMM: Initialized. Used pages: 520, Free pages: 261368
+[2] PMM: running self-tests
+[2] PMM: self-tests passed
 Welcome to Orion OS

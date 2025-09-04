@@ -6,6 +6,7 @@
 #include "lib/include/libc.h"
 #include "core/io.h"
 #include "core/process.h"
+#include "core/pmm.h"
 
 extern char __git_shortsha[]; /* Optional: linker-provided string */
 
@@ -18,6 +19,8 @@ void parent_process_entry(void) {
 void kmain(void) {
     // Fetch the current CPU ID for the parent process
     int parent_cpuid = get_current_cpuid();
+
+    serial_init();
 
     // Create the parent process
     Process parent_process = {
@@ -35,5 +38,9 @@ void kmain(void) {
     printf("Child PID: %d, CPUID: %d\n", child_process.pid, child_process.cpuid);
 
     // Start the parent process
+    // Initialize PMM and run tests before handing off to processes
+    pmm_init();
+    pmm_run_tests();
+
     parent_process.entry_point();
 }
