@@ -9,6 +9,10 @@ Debug: CPUID eax=397233, ebx=2048, ecx=2147491841, edx=126614525
 [2] PMM: Initialization complete
 [2] PMM: running self-tests
 [2] PMM: self-tests passed
+PMM debug: alloc_calls=0, alloc_cycles=0
+PMM debug: free_calls=0, free_cycles=0
+PMM alloc: No allocations performed
+PMM free: No frees performed
 [2] kmain: Creating parent process
 [2] kmain: Forking child process
 FORK: Starting fork function
@@ -17,4 +21,26 @@ FORK: Child process created with PID 2
 [2] Allocated stack for child process (PID: 2) at 0x0x308000
 Parent PID: 1, CPUID: 0
 Child PID: 2, CPUID: 0
+Starting PMM benchmark...
+Allocating 100 pages...
+Allocated 0 pages so far
+Allocated 25 pages so far
+Allocated 50 pages so far
+Allocated 75 pages so far
+Allocation complete. Metrics:
+PMM debug: alloc_calls=100, alloc_cycles=4306599
+PMM alloc: 43065 cycles/op
+Freeing 100 pages...
+Freed 0 pages so far
+Freed 25 pages so far
+Freed 50 pages so far
+Freed 75 pages so far
+Free complete. Metrics:
+PMM debug: free_calls=100, free_cycles=183645
+PMM free: 1836 cycles/op
+Benchmark complete.
+PMM debug: alloc_calls=100, alloc_cycles=4306599
+PMM debug: free_calls=100, free_cycles=183645
+PMM alloc: 43065 cycles/op
+PMM free: 1836 cycles/op
 Welcome to Orion OS

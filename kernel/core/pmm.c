@@ -3,6 +3,8 @@
 #include "core/pmm.h"
 #include "core/log.h"
 #include "lib/include/libc.h"
+#include <stdint.h>
+#include <stdio.h>
 
 // Simple fixed memory layout for now (will be improved later)
 #define MEMORY_START 0x100000    // 1MB
@@ -17,16 +19,27 @@ static uint64_t highest_address = MEMORY_END;
 static size_t total_pages = 0;
 static size_t used_pages = 0;
 
-static void bitmap_set(size_t page_idx) {
-    bitmap[page_idx / 8] |= (1u << (page_idx % 8));
+/* bitmap is an array of bytes (uint8_t). One bit = one page */
+
+/* a) Mark page as used */
+void bitmap_set(uint8_t *bitmap, size_t page_idx) {
+    size_t byte = page_idx / 8;          /* which byte?            */
+    uint8_t bit = page_idx % 8;          /* which bit inside byte? */
+    bitmap[byte] |= (1u << bit);         /* set that bit to 1      */
 }
 
-static void bitmap_clear(size_t page_idx) {
-    bitmap[page_idx / 8] &= ~(1u << (page_idx % 8));
+/* b) Mark page as free */
+void bitmap_clear(uint8_t *bitmap, size_t page_idx) {
+    size_t byte = page_idx / 8;
+    uint8_t bit = page_idx % 8;
+    bitmap[byte] &= ~(1u << bit);        /* clear that bit to 0    */
 }
 
-static bool bitmap_test(size_t page_idx) {
-    return (bitmap[page_idx / 8] & (1u << (page_idx % 8))) != 0;
+/* c) Is the page used?  (returns 1 = used, 0 = free) */
+int bitmap_test(uint8_t *bitmap, size_t page_idx) {
+    size_t byte = page_idx / 8;
+    uint8_t bit = page_idx % 8;
+    return (bitmap[byte] & (1u << bit)) != 0;
 }
 
 void pmm_init(void) {
@@ -52,8 +65,8 @@ void pmm_init(void) {
     
     for (uint64_t addr = free_start; addr < MEMORY_END; addr += PAGE_SIZE) {
         size_t page_idx = (addr - MEMORY_START) / PAGE_SIZE;
-        if (page_idx < total_pages && bitmap_test(page_idx)) {
-            bitmap_clear(page_idx);
+        if (page_idx < total_pages && bitmap_test(bitmap, page_idx)) {
+            bitmap_clear(bitmap, page_idx);
             used_pages--;
         }
     }
@@ -65,8 +78,8 @@ void pmm_init(void) {
 
 void* pmm_alloc(void) {
     for (size_t i = 0; i < total_pages; ++i) {
-        if (!bitmap_test(i)) {
-            bitmap_set(i);
+        if (!bitmap_test(bitmap, i)) {
+            bitmap_set(bitmap, i);
             used_pages++;
             return (void*)(MEMORY_START + i * PAGE_SIZE);
         }
@@ -87,10 +100,10 @@ void pmm_free(void* p_addr) {
     if (idx >= total_pages) {
         PANIC("PMM: free index out-of-range: %u", (unsigned)idx);
     }
-    if (!bitmap_test(idx)) {
+    if (!bitmap_test(bitmap, idx)) {
         PANIC("PMM: double free 0x%llx", addr);
     }
-    bitmap_clear(idx);
+    bitmap_clear(bitmap, idx);
     used_pages--;
 }
 
@@ -122,4 +135,81 @@ void pmm_run_tests(void) {
         PANIC("PMM Test: free mismatch");
     }
     LOG_INFO("PMM: self-tests passed");
+}
+
+/* Variables to track performance */
+uint64_t pmm_cycles_alloc = 0;
+uint64_t pmm_calls_alloc = 0;
+uint64_t pmm_cycles_free = 0;
+uint64_t pmm_calls_free = 0;
+
+/* x86 TSC */
+static inline uint64_t rdtsc(void)
+{
+    unsigned hi, lo;
+    asm volatile ("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+
+/* Coarse-grained bitmap implementation */
+#define BLOCK_SIZE 16 // Each bit represents 16 pages
+
+/* Wrap alloc_page to measure performance */
+void *alloc_page(void)
+{
+    uint64_t t0 = rdtsc();
+    for (size_t i = 0; i < total_pages / BLOCK_SIZE; ++i) {
+        if (!bitmap_test(bitmap, i)) {
+            bitmap_set(bitmap, i);
+            used_pages += BLOCK_SIZE;
+            pmm_cycles_alloc += rdtsc() - t0;
+            pmm_calls_alloc++;
+            return (void*)(MEMORY_START + i * BLOCK_SIZE * PAGE_SIZE);
+        }
+    }
+    LOG_WARN("PMM: Out of physical memory");
+    return NULL;
+}
+
+/* Wrap free_page to measure performance */
+void free_page(void *page)
+{
+    uint64_t t0 = rdtsc();
+    uint64_t addr = (uint64_t)page;
+    if (addr < MEMORY_START || addr >= MEMORY_END) {
+        PANIC("PMM: free out-of-range: 0x%llx", addr);
+    }
+    if (addr % PAGE_SIZE != 0) {
+        PANIC("PMM: free non-aligned: 0x%llx", addr);
+    }
+    size_t idx = (addr - MEMORY_START) / (BLOCK_SIZE * PAGE_SIZE);
+    if (idx >= total_pages / BLOCK_SIZE) {
+        PANIC("PMM: free index out-of-range: %u", (unsigned)idx);
+    }
+    if (!bitmap_test(bitmap, idx)) {
+        PANIC("PMM: double free 0x%llx", addr);
+    }
+    bitmap_clear(bitmap, idx);
+    used_pages -= BLOCK_SIZE;
+    pmm_cycles_free += rdtsc() - t0;
+    pmm_calls_free++;
+}
+
+/* Function to print performance metrics */
+void print_pmm_metrics(void)
+{
+    printf("PMM debug: alloc_calls=%u, alloc_cycles=%u\n", (unsigned)pmm_calls_alloc, (unsigned)pmm_cycles_alloc);
+    printf("PMM debug: free_calls=%u, free_cycles=%u\n", (unsigned)pmm_calls_free, (unsigned)pmm_cycles_free);
+    
+    if (pmm_calls_alloc > 0) {
+        printf("PMM alloc: %u cycles/op\n", (unsigned)(pmm_cycles_alloc / pmm_calls_alloc));
+    } else {
+        printf("PMM alloc: No allocations performed\n");
+    }
+
+    if (pmm_calls_free > 0) {
+        printf("PMM free: %u cycles/op\n", (unsigned)(pmm_cycles_free / pmm_calls_free));
+    } else {
+        printf("PMM free: No frees performed\n");
+    }
 }
