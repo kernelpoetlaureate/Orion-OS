@@ -25,9 +25,24 @@ void kmain(void) {
     LOG_INFO("kmain: Initializing serial output");
     serial_init();
 
-    // Initialize PMM first before creating processes
-    pmm_init();
-    pmm_run_tests();
+    // Prompt for PMM type selection
+    printf("Select PMM Type:\n");
+    printf("1. Fine-grained bitmap (1 bit per page)\n");
+    printf("2. Coarse-grained bitmap (1 bit per 16 pages)\n");
+    printf("Enter choice (1 or 2): ");
+    
+    // In a real system, this would read input from keyboard
+    // For now, let's use a default value (can be changed manually here)
+    int choice = 2; // Default to coarse-grained
+    printf("%d\n", choice);
+    
+    // Set PMM type based on choice
+    pmm_type_t pmm_type = (choice == 1) ? PMM_BITMAP_FINE : PMM_BITMAP_COARSE;
+    printf("Using %s\n", pmm_get_type_name(pmm_type));
+    
+    // Initialize PMM with selected type
+    pmm_init(pmm_type);
+    pmm_self_test();
 
     // Print PMM performance metrics after kernel initialization
     print_pmm_metrics();
@@ -66,7 +81,7 @@ void kmain(void) {
     // Allocate pages
     printf("Allocating %d pages...\n", NUM_ALLOCS);
     for (int i = 0; i < NUM_ALLOCS; i++) {
-        pages[i] = alloc_page();
+        pages[i] = pmm_alloc();
         if (i % 25 == 0) {
             printf("Allocated %d pages so far\n", i);
         }
@@ -88,7 +103,7 @@ void kmain(void) {
     // Free pages
     printf("Freeing %d pages...\n", NUM_ALLOCS);
     for (int i = 0; i < NUM_ALLOCS; i++) {
-        free_page(pages[i]);
+        pmm_free(pages[i]);
         if (i % 25 == 0) {
             printf("Freed %d pages so far\n", i);
         }

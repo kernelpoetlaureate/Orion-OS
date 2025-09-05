@@ -1,24 +1,30 @@
 [2] kmain: Starting kernel main function
 Debug: CPUID eax=397233, ebx=2048, ecx=2147491841, edx=126614525
 [2] kmain: Initializing serial output
+Select PMM Type:
+1. Fine-grained bitmap (1 bit per page)
+2. Coarse-grained bitmap (1 bit per 16 pages)
+Enter choice (1 or 2): 2
+Using Coarse-grained bitmap (1 bit per 16 pages)
 [2] PMM: Starting initialization
 [2] PMM: Memory range: 0x100000 - 0x40000000
-[2] PMM: Total pages 261888, bitmap 32736 bytes
+[2] PMM: Using Coarse-grained bitmap (1 bit per 16 pages)
+[2] PMM: Total pages 261888, bitmap 2046 bytes
 [2] PMM: Placing bitmap at 0x0x300000
-[2] PMM: Initialized. Used pages: 520, Free pages: 261368
+[2] PMM: Initialized. Used pages: 512, Free pages: 261376
 [2] PMM: Initialization complete
 [2] PMM: running self-tests
 [2] PMM: self-tests passed
-PMM debug: alloc_calls=0, alloc_cycles=0
-PMM debug: free_calls=0, free_cycles=0
-PMM alloc: No allocations performed
-PMM free: No frees performed
+PMM debug: alloc_calls=1, alloc_cycles=259413
+PMM debug: free_calls=1, free_cycles=147906
+PMM alloc: 259413 cycles/op
+PMM free: 147906 cycles/op
 [2] kmain: Creating parent process
 [2] kmain: Forking child process
 FORK: Starting fork function
 FORK: About to create child process struct
 FORK: Child process created with PID 2
-[2] Allocated stack for child process (PID: 2) at 0x0x308000
+[2] Allocated stack for child process (PID: 2) at 0x0x100000
 Parent PID: 1, CPUID: 0
 Child PID: 2, CPUID: 0
 Starting PMM benchmark...
@@ -28,19 +34,19 @@ Allocated 25 pages so far
 Allocated 50 pages so far
 Allocated 75 pages so far
 Allocation complete. Metrics:
-PMM debug: alloc_calls=100, alloc_cycles=4306599
-PMM alloc: 43065 cycles/op
+PMM debug: alloc_calls=100, alloc_cycles=495495
+PMM alloc: 4954 cycles/op
 Freeing 100 pages...
 Freed 0 pages so far
 Freed 25 pages so far
 Freed 50 pages so far
 Freed 75 pages so far
 Free complete. Metrics:
-PMM debug: free_calls=100, free_cycles=183645
-PMM free: 1836 cycles/op
+PMM debug: free_calls=100, free_cycles=27522
+PMM free: 275 cycles/op
 Benchmark complete.
-PMM debug: alloc_calls=100, alloc_cycles=4306599
-PMM debug: free_calls=100, free_cycles=183645
-PMM alloc: 43065 cycles/op
-PMM free: 1836 cycles/op
+PMM debug: alloc_calls=100, alloc_cycles=495495
+PMM debug: free_calls=100, free_cycles=27522
+PMM alloc: 4954 cycles/op
+PMM free: 275 cycles/op
 Welcome to Orion OS
