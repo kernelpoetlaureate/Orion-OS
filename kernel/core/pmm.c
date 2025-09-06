@@ -18,30 +18,26 @@
 #include <stdio.h>
 #include <unistd.h>
 
-// Simple fixed memory layout for now (will be improved later)
+// Simple fixed memory layout for now (will be improved later). It doesnt fetch the map from bootloader
+
 #define MEMORY_START 0x100000    // 1MB
 #define MEMORY_END   0x40000000  // 1GB (conservative estimate)
 #define KERNEL_START 0x100000    // Where our kernel is loaded
 #define KERNEL_SIZE  0x200000    // 2MB reserved for kernel
 
 // Block size for coarse bitmap (16 pages = 64KB)
-#define BLOCK_SIZE 32
+#define BLOCK_SIZE 32 // 32 pages = 128KB
 
-// Internal state
-static uint8_t* bitmap = NULL;
-static size_t bitmap_size_bytes = 0;
-static uint64_t highest_address = MEMORY_END;
+// Internal starting state
+static uint8_t* bitmap = NULL;  // Pointer to the bitmap
+static size_t bitmap_size_bytes = 0; 
+static uint64_t highest_address = MEMORY_END;       
 static size_t total_pages = 0;
 static size_t used_pages = 0;
 static pmm_type_t current_pmm_type = PMM_BITMAP_FINE; // Default
 
-/* Variables to track performance */
-uint64_t pmm_cycles_alloc = 0;
-uint64_t pmm_calls_alloc = 0;
-uint64_t pmm_cycles_free = 0;
-uint64_t pmm_calls_free = 0;
 
-/* x86 TSC */
+/* x86 TSC The TSC is a 64-bit register that counts the number of cycles since the last reset. It is used for high-resolution timing and performance measurement. */
 static inline uint64_t rdtsc(void)
 {
     unsigned hi, lo;
@@ -90,8 +86,10 @@ const char* pmm_get_type_name(pmm_type_t type) {
 }
 
 void pmm_init(pmm_type_t type) {
+    LOG_INFO("==========================================================");
+
     LOG_INFO("PMM: Starting initialization");
-    LOG_INFO("PMM: Memory range: 0x%x - 0x%x", MEMORY_START, MEMORY_END);
+    LOG_INFO("Memory range managed by PMM: 0x%x - 0x%x", MEMORY_START, MEMORY_END);
     LOG_INFO("PMM: Using %s", pmm_get_type_name(type));
     
     current_pmm_type = type;
@@ -104,7 +102,7 @@ void pmm_init(pmm_type_t type) {
         bitmap_size_bytes = (total_pages + 7) / 8;
     }
 
-    LOG_INFO("PMM: Total pages %u, bitmap %u bytes", (unsigned)total_pages, (unsigned)bitmap_size_bytes);
+    LOG_INFO("PMM: Total pages based on whatever PMM type you chose is : %u, bitmap is made of %u bytes", (unsigned)total_pages, (unsigned)bitmap_size_bytes);
 
     // Place bitmap right after kernel
     bitmap = (uint8_t*)(KERNEL_START + KERNEL_SIZE);
@@ -284,7 +282,14 @@ void pmm_free(void* page)
     }
 }
 
-/* Function to print performance metrics */
+// Profiling and metrics functions
+
+/* Variables to track performance */
+uint64_t pmm_cycles_alloc = 0;
+uint64_t pmm_calls_alloc = 0;
+uint64_t pmm_cycles_free = 0;
+uint64_t pmm_calls_free = 0;
+
 void print_pmm_metrics(void)
 {
     printf("PMM debug: alloc_calls=%u, alloc_cycles=%u\n", (unsigned)pmm_calls_alloc, (unsigned)pmm_cycles_alloc);
@@ -305,8 +310,13 @@ void print_pmm_metrics(void)
 
 void pmm_print_memory_map(void) {
     static char memory_map_buffer[4096]; // Predefined buffer for memory map
+    
     size_t offset = 0;
+    LOG_INFO("                          ");
+    LOG_INFO("                          ");
 
+    LOG_INFO("SEGMENTS OF USABLE MEMORY");
+    //SEGMENTS OF USABLE MEMORY
     offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Physical Memory Map:\n");
     offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Total memory: %u KB\n", (unsigned)(total_pages * PAGE_SIZE / 1024));
     offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Used memory: %u KB\n", (unsigned)(used_pages * PAGE_SIZE / 1024));

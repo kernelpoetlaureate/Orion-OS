@@ -25,10 +25,13 @@ void parent_process_entry(void) {
 }
 
 void kmain(multiboot_info_t *mb_info) {
+    LOG_INFO("00000000000000000000000000000000000000000");
     LOG_INFO("kmain: Starting kernel main function");
 
     // Parse Multiboot information structure
     if (mb_info->flags & 0x1) {
+        printf("00000000000000000000000000000000000000000");
+
         printf("Lower memory: %u KB\n", mb_info->mem_lower);
         printf("Upper memory: %u KB\n", mb_info->mem_upper);
     } else {
