@@ -45,3 +45,6 @@ void print_pmm_metrics(void);
 /* Declare the alloc_page and free_page functions */
 void *alloc_page(void);
 void free_page(void *page);
+
+/* Print the physical memory map */
+void pmm_print_memory_map(void);

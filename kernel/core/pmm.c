@@ -3,8 +3,10 @@
 #include "core/pmm.h"
 #include "core/log.h"
 #include "lib/include/libc.h"
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 
 // Simple fixed memory layout for now (will be improved later)
 #define MEMORY_START 0x100000    // 1MB
@@ -13,7 +15,7 @@
 #define KERNEL_SIZE  0x200000    // 2MB reserved for kernel
 
 // Block size for coarse bitmap (16 pages = 64KB)
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 32
 
 // Internal state
 static uint8_t* bitmap = NULL;
@@ -289,4 +291,26 @@ void print_pmm_metrics(void)
     } else {
         printf("PMM free: No frees performed\n");
     }
+}
+
+void pmm_print_memory_map(void) {
+    static char memory_map_buffer[4096]; // Predefined buffer for memory map
+    size_t offset = 0;
+
+    offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Physical Memory Map:\n");
+    offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Total memory: %u KB\n", (unsigned)(total_pages * PAGE_SIZE / 1024));
+    offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Used memory: %u KB\n", (unsigned)(used_pages * PAGE_SIZE / 1024));
+    offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Free memory: %u KB\n", (unsigned)((total_pages - used_pages) * PAGE_SIZE / 1024));
+
+    offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "Bitmap (1 = used, 0 = free):\n");
+    for (size_t i = 0; i < total_pages; i++) {
+        offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "%c", bitmap_test(bitmap, i) ? '1' : '0');
+        if ((i + 1) % 64 == 0) {
+            offset += snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "\n");
+        }
+    }
+    snprintf(memory_map_buffer + offset, sizeof(memory_map_buffer) - offset, "\n");
+
+    // Output the buffer to the VGA or serial console for debugging
+    printf("%s", memory_map_buffer);
 }

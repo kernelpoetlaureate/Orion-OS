@@ -55,6 +55,9 @@ _start:
     ; Show we're starting
     mov dword [0xb8000], 0x2f532f53 ; 'SS' in white on green (Starting Setup)
     
+    ; Set the Multiboot information pointer
+    mov [multiboot_info_ptr], ebx
+    
     ; Check if long mode is available
     call check_long_mode
     test eax, eax
@@ -187,7 +190,8 @@ long_mode_start:
     ; Show we're in 64-bit mode
     mov qword [0xb8008], 0x2f342f36 ; '64' in white on green
     
-    ; Call the kernel main function
+    ; Pass the Multiboot information structure pointer to kmain
+    mov rdi, [multiboot_info_ptr]
     call kmain
     
     ; If kmain returns, halt the CPU
@@ -195,5 +199,9 @@ long_mode_start:
 .hang:
     hlt
     jmp .hang
+
+; Define the Multiboot information pointer
+section .data
+multiboot_info_ptr: dq 0
 
 

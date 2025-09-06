@@ -10,17 +10,30 @@
 
 extern char __git_shortsha[]; /* Optional: linker-provided string */
 
+// Multiboot information structure
+typedef struct {
+    uint32_t flags;
+    uint32_t mem_lower;
+    uint32_t mem_upper;
+    // Other fields can be added as needed
+} multiboot_info_t;
+
 // Parent process entry point
 void parent_process_entry(void) {
     printf("Welcome to Orion OS\n");
     for (;;) __asm__ volatile ("hlt");
 }
 
-void kmain(void) {
+void kmain(multiboot_info_t *mb_info) {
     LOG_INFO("kmain: Starting kernel main function");
 
-    // Fetch the current CPU ID for the parent process
-    int parent_cpuid = get_current_cpuid();
+    // Parse Multiboot information structure
+    if (mb_info->flags & 0x1) {
+        printf("Lower memory: %u KB\n", mb_info->mem_lower);
+        printf("Upper memory: %u KB\n", mb_info->mem_upper);
+    } else {
+        printf("Memory information not available.\n");
+    }
 
     LOG_INFO("kmain: Initializing serial output");
     serial_init();
@@ -47,12 +60,16 @@ void kmain(void) {
     // Print PMM performance metrics after kernel initialization
     print_pmm_metrics();
 
+    // Print the physical memory map managed by the PMM
+    printf("Physical Memory Map:\n");
+    pmm_print_memory_map();
+
     LOG_INFO("kmain: Creating parent process");
     // Create the parent process
     Process parent_process = {
         .name = "Parent Process",
         .pid = 1,
-        .cpuid = parent_cpuid,
+        .cpuid = get_current_cpuid(),
         .entry_point = parent_process_entry,
         .stack_pointer = 0  // Parent uses kernel stack
     };
@@ -64,64 +81,6 @@ void kmain(void) {
     // Print PIDs and CPU IDs of both processes
     printf("Parent PID: %d, CPUID: %d\n", parent_process.pid, parent_process.cpuid);
     printf("Child PID: %d, CPUID: %d\n", child_process.pid, child_process.cpuid);
-
-    // More robust PMM benchmark
-    printf("Starting PMM benchmark...\n");
-    
-    // Reset performance counters
-    pmm_cycles_alloc = 0;
-    pmm_calls_alloc = 0;
-    pmm_cycles_free = 0;
-    pmm_calls_free = 0;
-    
-    // Number of allocations to test
-    #define NUM_ALLOCS 100
-    void *pages[NUM_ALLOCS];
-    
-    // Allocate pages
-    printf("Allocating %d pages...\n", NUM_ALLOCS);
-    for (int i = 0; i < NUM_ALLOCS; i++) {
-        pages[i] = pmm_alloc();
-        if (i % 25 == 0) {
-            printf("Allocated %d pages so far\n", i);
-        }
-    }
-    
-    // Print allocation metrics
-    printf("Allocation complete. Metrics:\n");
-    printf("PMM debug: alloc_calls=%u, alloc_cycles=%u\n", 
-           (unsigned)pmm_calls_alloc, (unsigned)pmm_cycles_alloc);
-    if (pmm_calls_alloc > 0) {
-        printf("PMM alloc: %u cycles/op\n", 
-               (unsigned)(pmm_cycles_alloc / pmm_calls_alloc));
-    }
-    
-    // Reset free counters
-    pmm_cycles_free = 0;
-    pmm_calls_free = 0;
-    
-    // Free pages
-    printf("Freeing %d pages...\n", NUM_ALLOCS);
-    for (int i = 0; i < NUM_ALLOCS; i++) {
-        pmm_free(pages[i]);
-        if (i % 25 == 0) {
-            printf("Freed %d pages so far\n", i);
-        }
-    }
-    
-    // Print free metrics
-    printf("Free complete. Metrics:\n");
-    printf("PMM debug: free_calls=%u, free_cycles=%u\n", 
-           (unsigned)pmm_calls_free, (unsigned)pmm_cycles_free);
-    if (pmm_calls_free > 0) {
-        printf("PMM free: %u cycles/op\n", 
-               (unsigned)(pmm_cycles_free / pmm_calls_free));
-    }
-    
-    printf("Benchmark complete.\n");
-
-    // Print final PMM performance metrics
-    print_pmm_metrics();
 
     // Start the parent process
     parent_process.entry_point();
