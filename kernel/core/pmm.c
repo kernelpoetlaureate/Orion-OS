@@ -1,5 +1,15 @@
 // kernel/core/pmm.c
 
+// This file implements the Physical Memory Manager (PMM) for Orion OS.
+// The PMM is responsible for managing physical memory allocation and deallocation.
+// It supports two types of memory management:
+// 1. Fine-Grained Bitmap (PMM_BITMAP_FINE):
+//    - Each bit in the bitmap represents a single page of memory.
+//    - Provides precise control but requires a larger bitmap.
+// 2. Coarse-Grained Bitmap (PMM_BITMAP_COARSE):
+//    - Each bit in the bitmap represents a block of multiple pages (e.g., 16 or 32 pages).
+//    - Reduces bitmap size but sacrifices granularity.
+
 #include "core/pmm.h"
 #include "core/log.h"
 #include "lib/include/libc.h"

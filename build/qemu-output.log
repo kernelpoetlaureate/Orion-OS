@@ -15,10 +15,10 @@ Using Coarse-grained bitmap (1 bit per 16 pages)
 [2] PMM: Initialization complete
 [2] PMM: running self-tests
 [2] PMM: self-tests passed
-PMM debug: alloc_calls=1, alloc_cycles=239019
-PMM debug: free_calls=1, free_cycles=139887
-PMM alloc: 239019 cycles/op
-PMM free: 139887 cycles/op
+PMM debug: alloc_calls=1, alloc_cycles=226380
+PMM debug: free_calls=1, free_cycles=148632
+PMM alloc: 226380 cycles/op
+PMM free: 148632 cycles/op
 Physical Memory Map:
 Physical Memory Map:
 Total memory: 1047552 KB
