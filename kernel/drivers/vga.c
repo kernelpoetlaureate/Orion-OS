@@ -9,8 +9,12 @@
 // Purpose: Directly writes characters and attributes to video memory.
 static uint16_t *const VGA_BUFFER = (uint16_t *)0xB8000;
 
+// VGA_WIDTH (80): Represents the number of columns (characters per row) in the VGA text mode.
+// VGA_HEIGHT (25): Represents the number of rows (lines) in the VGA text mode.
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
+
+
 static size_t vga_row = 0;
 static size_t vga_col = 0;
 

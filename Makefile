@@ -62,18 +62,17 @@ debug: $(KERNEL_ELF)
 
 iso: $(BUILD_DIR)/orion.iso
 
-$(BUILD_DIR)/orion.iso: limine.cfg $(KERNEL_ELF) limine/limine-cd-efi.bin limine/limine.sys
-	@echo "Creating ISO directory..."
-	mkdir -p $(BUILD_DIR)/EFI/BOOT
-	cp limine.cfg $(BUILD_DIR)/
-	cp limine/limine-cd-efi.bin $(BUILD_DIR)/
-	cp limine/BOOTX64.EFI $(BUILD_DIR)/EFI/BOOT/
-	cp limine/limine.sys $(BUILD_DIR)/
-	@echo "Generating ISO..."
-	xorriso -as mkisofs -b limine-cd-efi.bin -no-emul-boot -boot-load-size 4 \
-		-boot-info-table --efi-boot EFI/BOOT/BOOTX64.EFI -o $(BUILD_DIR)/orion.iso $(BUILD_DIR)/ || true
-	@echo "Deploying Limine..."
-	limine/limine-deploy $(BUILD_DIR)/orion.iso
+$(BUILD_DIR)/orion.iso: $(KERNEL_ELF)
+	@echo "Building GRUB ISO (GRUB is now the default bootloader)..."
+	mkdir -p $(BUILD_DIR)/grub_iso/boot/grub
+	cp $(KERNEL_ELF) $(BUILD_DIR)/grub_iso/kernel.elf
+	@echo "set timeout=5" > $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "menuentry 'Orion OS kernel.elf' {" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "  multiboot2 /kernel.elf" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "  boot" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "}" >> $(BUILD_DIR)/grub_iso/boot/grub/grub.cfg
+	@echo "Generating GRUB ISO..."
+	grub-mkrescue -o $(BUILD_DIR)/orion.iso $(BUILD_DIR)/grub_iso || true
 
 clean:
 	@echo "Cleaning build artifacts..."
