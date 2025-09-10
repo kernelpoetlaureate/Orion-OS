@@ -10,13 +10,39 @@ int next_pid = 2;
 // Function to get the current CPU ID
 int get_current_cpuid() {
     unsigned int eax, ebx, ecx, edx;
+
+    // Check if CPUID instruction is supported
+    unsigned long id_flag_original, id_flag_modified;
     __asm__ volatile (
-        "cpuid"
-        : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(1)
+        "pushfq\n\t" // Push original RFLAGS to stack
+        "pop %%rax\n\t" // Pop into RAX
+        "mov %%rax, %0\n\t" // Save original RFLAGS
+        "xor $0x200000, %%rax\n\t" // Flip ID flag (bit 21)
+        "push %%rax\n\t" // Push modified RFLAGS
+        "popfq\n\t" // Load modified RFLAGS
+        "pushfq\n\t" // Push modified RFLAGS to stack
+        "pop %%rax\n\t" // Pop into RAX
+        "mov %%rax, %1\n\t" // Save modified RFLAGS
+        "push %0\n\t" // Restore original RFLAGS
+        "popfq\n\t" // Load original RFLAGS
+        : "=r"(id_flag_original), "=r"(id_flag_modified)
+        :
+        : "rax"
     );
-    printf("Debug: CPUID eax=%u, ebx=%u, ecx=%u, edx=%u\n", eax, ebx, ecx, edx);
-    return (ebx >> 24) & 0xFF; // Extract APIC ID
+
+    if ((id_flag_original ^ id_flag_modified) & 0x200000) {
+        // CPUID is supported
+        __asm__ volatile (
+            "cpuid"
+            : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+            : "a"(1)
+        );
+        printf("Debug: CPUID eax=%u, ebx=%u, ecx=%u, edx=%u\n", eax, ebx, ecx, edx);
+        return (ebx >> 24) & 0xFF; // Extract APIC ID
+    } else {
+        printf("Error: CPUID instruction is not supported on this processor.\n");
+        return -1; // Indicate error
+    }
 }
 
 // Fork function to create a child process

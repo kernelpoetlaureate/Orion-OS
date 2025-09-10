@@ -7,6 +7,7 @@
 #include "core/io.h"
 #include "core/process.h"
 #include "core/pmm.h"
+#include "boot/multiboot2.h"
 
 extern char __git_shortsha[]; /* Optional: linker-provided string */
 
@@ -55,9 +56,22 @@ void kmain(multiboot_info_t *mb_info) {
     // Set PMM type based on choice
     pmm_type_t pmm_type = (choice == 1) ? PMM_BITMAP_FINE : PMM_BITMAP_COARSE;
     printf("Using %s\n", pmm_get_type_name(pmm_type));
-    
-    // Initialize PMM with selected type
-    pmm_init(pmm_type);
+
+    /*
+     * Build a phys_mem_region_t list from Multiboot (legacy) info.
+     * The simple multiboot_info_t used here is a legacy struct; for a
+     * production Multiboot2 parser you would parse tags. We will attempt
+     * to build a minimal map from mem_lower/mem_upper as a fallback.
+     */
+    phys_mem_region_t map[32];
+    size_t map_entries = parse_multiboot2(mb_info, map, 32);
+    if (map_entries == 0) {
+        LOG_WARN("kmain: multiboot2 parse produced no usable regions, falling back to pmm_init()");
+        pmm_init(pmm_type);
+    } else {
+        LOG_INFO("kmain: parsed %u usable memory regions from Multiboot2", (unsigned)map_entries);
+        pmm_init_from_map(map, map_entries, pmm_type);
+    }
     pmm_self_test();
 
     // Print PMM performance metrics after kernel initialization

@@ -15,11 +15,15 @@ LIB_OBJS = $(BUILD_DIR)/printf.o $(BUILD_DIR)/mem.o
 CORE_OBJS = $(BUILD_DIR)/process.o
 CORE_OBJS += $(BUILD_DIR)/pmm.o
 CORE_OBJS += $(BUILD_DIR)/panic.o
+CORE_OBJS += $(BUILD_DIR)/boot/multiboot2.o
 
 all: $(KERNEL_ELF)
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+
+$(BUILD_DIR)/boot:
+	mkdir -p $(BUILD_DIR)/boot
 
 $(KERNEL_OBJ): | $(BUILD_DIR)
 	@echo "Compiling kernel objects..."
@@ -45,6 +49,9 @@ $(BUILD_DIR)/pmm.o: kernel/core/pmm.c | $(BUILD_DIR)
 
 $(BUILD_DIR)/panic.o: kernel/core/panic.c | $(BUILD_DIR)
 	$(CC) -ffreestanding -c -g kernel/core/panic.c -o $(BUILD_DIR)/panic.o
+
+$(BUILD_DIR)/boot/multiboot2.o: kernel/boot/multiboot2.c | $(BUILD_DIR)/boot
+	$(CC) -ffreestanding -c -g kernel/boot/multiboot2.c -o $(BUILD_DIR)/boot/multiboot2.o
 
 $(KERNEL_ELF): $(KERNEL_OBJ) $(DRIVER_OBJS) $(LIB_OBJS) $(CORE_OBJS) linker.ld kernel/arch/x86_64/boot/_start.asm
 	@echo "Assembling entry..."
