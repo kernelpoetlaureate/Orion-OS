@@ -3,50 +3,33 @@
 #include <stdint.h>
 #include "include/libc.h"
 #include "../drivers/serial.h"
-#include "../drivers/vga.h"
 
-// Forward declarations of static functions
 static void reverse(char *start, char *end);
 static char *utoa(unsigned long val, char *buf, int base, int lowercase);
 
-// Forward declarations of public functions
 int vsnprintf(char *out, size_t size, const char *fmt, va_list ap);
 int snprintf(char *out, size_t size, const char *fmt, ...);
 
-// High-Level Formatting Layer
-// This file provides formatted output functions for the kernel, including printf, kprintf, snprintf, and vsnprintf.
-// These functions format strings and send them to the low-level VGA driver for display.
-
-// printf: C-standard style printing to the console. Internally calls vsnprintf to format strings.
-// Purpose: Convenient formatted output for debugging and kernel messages.
-// Optional but highly useful for format-string convenience.
 int printf(const char *fmt, ...) {
     char buf[1024];
     va_list ap;
     va_start(ap, fmt);
     int ret = vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
-    serial_write(buf); // Output the formatted string to the serial port
-    return ret; // Return the number of characters written
+    serial_write(buf);
+    return ret;
 }
 
-// kprintf: Kernel-specific printf variant. May add kernel prefixes, colors, or bypass user-level assumptions.
-// Purpose: Provides a "kernel-only" variant of printf.
-// Keep if you want kernel-specific features; otherwise, merge with printf.
 void kprintf(const char *fmt, ...) {
     char buf[512];
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
-    // Ensure serial is up
     serial_init();
     serial_write(buf);
 }
 
-// snprintf: Formats a string into a memory buffer. Used by printf and other code needing temporary strings.
-// Purpose: Helper utility for formatted string construction.
-// Needed only because printf and other code rely on it.
 int snprintf(char *out, size_t size, const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
@@ -54,8 +37,6 @@ int snprintf(char *out, size_t size, const char *fmt, ...) {
     va_end(ap);
     return r;
 }
-
-// Implementation of utility functions
 
 static void reverse(char *start, char *end) {
     while (start < end) {
@@ -82,12 +63,9 @@ static char *utoa(unsigned long val, char *buf, int base, int lowercase) {
     return buf;
 }
 
-// vsnprintf: Formats a string into a memory buffer using a va_list.
-// Purpose: Core formatting function used by snprintf and printf.
-// Needed only if the formatted-printing stack is retained.
 int vsnprintf(char *out, size_t size, const char *fmt, va_list ap) {
     char *start = out;
-    size_t left = size ? size - 1 : 0; // reserve space for NUL
+    size_t left = size ? size - 1 : 0;
 
     while (*fmt) {
         if (*fmt != '%') {
@@ -95,7 +73,7 @@ int vsnprintf(char *out, size_t size, const char *fmt, va_list ap) {
             ++fmt;
             continue;
         }
-        ++fmt; // skip '%'
+        ++fmt;
         int longflag = 0;
         if (*fmt == 'l') { longflag = 1; ++fmt; }
         char buf[32];
@@ -150,7 +128,6 @@ int vsnprintf(char *out, size_t size, const char *fmt, va_list ap) {
                 break;
             }
             default:
-                // Unknown specifier; ignore
                 break;
         }
     }
