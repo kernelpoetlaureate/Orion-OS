@@ -86,7 +86,7 @@ void kmain(multiboot_info_t *mb_info) {
     Process parent_process = {
         .name = "Parent Process",
         .pid = 1,
-        .cpuid = get_current_cpuid(),
+        .cpuid = 0, // Set to 0 as a placeholder
         .entry_point = parent_process_entry,
         .stack_pointer = 0  // Parent uses kernel stack
     };
