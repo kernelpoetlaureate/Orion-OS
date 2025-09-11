@@ -8,6 +8,8 @@
 #include "core/process.h"
 #include "core/pmm.h"
 #include "boot/multiboot2.h"
+#include "fs/fs.h"
+#include "lib/printf.h"
 
 extern char __git_shortsha[];
 
@@ -18,6 +20,7 @@ void parent_process_entry(void) {
 
 void kmain(void *mb_info) {
     serial_init();
+    vga_init();
     printf("==== Orion OS Kernel Boot ====" "\n");
 
     phys_mem_region_t map[32];
@@ -34,6 +37,13 @@ void kmain(void *mb_info) {
     Process parent = {
         .entry_point = parent_process_entry
     };
+
+    int fs_status = fs_init();
+    if (fs_status == 0) {
+        serial_write("[kernel] fs_init success\n");
+    } else {
+        serial_write("[kernel] fs_init failed\n");
+    }
 
     parent.entry_point();
 }

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "include/libc.h"
 #include "../drivers/serial.h"
+#include "../drivers/vga.h"
 
 static void reverse(char *start, char *end);
 static char *utoa(unsigned long val, char *buf, int base, int lowercase);
@@ -17,6 +18,7 @@ int printf(const char *fmt, ...) {
     int ret = vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     serial_write(buf);
+    vga_write(buf);
     return ret;
 }
 

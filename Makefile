@@ -16,6 +16,7 @@ CORE_OBJS = $(BUILD_DIR)/process.o
 CORE_OBJS += $(BUILD_DIR)/pmm.o
 CORE_OBJS += $(BUILD_DIR)/panic.o
 CORE_OBJS += $(BUILD_DIR)/boot/multiboot2.o
+CORE_OBJS += $(BUILD_DIR)/fs.o
 
 all: $(KERNEL_ELF)
 
@@ -52,6 +53,9 @@ $(BUILD_DIR)/panic.o: kernel/core/panic.c | $(BUILD_DIR)
 
 $(BUILD_DIR)/boot/multiboot2.o: kernel/boot/multiboot2.c | $(BUILD_DIR)/boot
 	$(CC) -ffreestanding -c -g kernel/boot/multiboot2.c -o $(BUILD_DIR)/boot/multiboot2.o
+
+$(BUILD_DIR)/fs.o: kernel/fs/fs.c | $(BUILD_DIR)
+	$(CC) -ffreestanding -c -g kernel/fs/fs.c -o $(BUILD_DIR)/fs.o
 
 $(KERNEL_ELF): $(KERNEL_OBJ) $(DRIVER_OBJS) $(LIB_OBJS) $(CORE_OBJS) linker.ld kernel/arch/x86_64/boot/_start.asm
 	@echo "Assembling entry..."
