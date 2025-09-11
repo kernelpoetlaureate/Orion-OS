@@ -39,17 +39,26 @@ int read_blocks(int dev, size_t lba, size_t count, void *buf) {
     (void)dev; // Only one device for now
     size_t offset = lba * RAMDISK_BLOCK_SIZE;
     size_t bytes = count * RAMDISK_BLOCK_SIZE;
-    if (!initrd_base || offset + bytes > initrd_size) return -1;
-    memcpy(buf, initrd_base + offset, bytes);
+    if (initrd_base) {
+        if (offset + bytes > initrd_size) return -1;
+        memcpy(buf, initrd_base + offset, bytes);
+        return 0;
+    }
+    // Fall back to in-memory ramdisk
+    if (offset + bytes > sizeof(ramdisk)) return -1;
+    memcpy(buf, &ramdisk[offset], bytes);
     return 0;
 }
 
 int write_blocks(int dev, size_t lba, size_t count, const void *buf) {
     (void)dev; // Read-only
-    (void)lba;
-    (void)count;
-    (void)buf;
-    return -1; // Read-only
+    size_t offset = lba * RAMDISK_BLOCK_SIZE;
+    size_t bytes = count * RAMDISK_BLOCK_SIZE;
+    // If initrd is present, treat it as read-only
+    if (initrd_base) return -1;
+    if (offset + bytes > sizeof(ramdisk)) return -1;
+    memcpy(&ramdisk[offset], buf, bytes);
+    return 0;
 }
 
 // Simple test for RAM-disk block API
@@ -90,25 +99,42 @@ static void vga_write_direct(const char *s) {
 
 // Example FS init function that calls the RAM-disk test
 int fs_init(void) {
-    int test_result = test_ramdisk();
+     /* Initialize block table and in-memory ramdisk for read/write tests.
+         We deliberately avoid calling test_ramdisk()/init_ramdisk here because
+         that sets `initrd_base` (read-only view) which would prevent writes
+         being visible to subsequent reads. For the simple demo (hello world)
+         we use the in-memory `ramdisk` buffer as the device backing. */
+     init_blocks();
+     memset(ramdisk, 0, sizeof(ramdisk));
 
-    /* Print to serial (host terminal) */
-    serial_write("[fs] RAM-disk test result: ");
-    if (test_result == 0) {
-        serial_write("Success\n");
-    } else {
-        serial_write("Failure\n");
-    }
+     serial_write("[fs] initialized in-memory ramdisk\n");
+     vga_puts_local("[fs] initialized in-memory ramdisk\n");
+     vga_write_direct("[fs] initialized in-memory ramdisk\n");
 
-    /* Also print to VGA (QEMU window) */
-    if (test_result == 0) {
-        vga_puts_local("[fs] RAM-disk test result: Success\n");
-        vga_write_direct("[fs] RAM-disk test result: Success\n");
-    } else {
-        vga_puts_local("[fs] RAM-disk test result: Failure\n");
-        vga_write_direct("[fs] RAM-disk test result: Failure\n");
-    }
+     return 0;
+}
 
-    return test_result;
+// Convenience: write a null-terminated string to block `lba` (single block)
+int fs_write_string(size_t lba, const char *s) {
+    char buf[RAMDISK_BLOCK_SIZE];
+    memset(buf, 0, sizeof(buf));
+    size_t len = strlen(s);
+    if (len >= sizeof(buf)) return -1;
+    memcpy(buf, s, len);
+    return write_blocks(0, lba, 1, buf);
+}
+
+// Convenience: read a string from block `lba` into dst (dst_len bytes)
+int fs_read_string(size_t lba, char *dst, size_t dst_len) {
+    if (dst_len == 0) return -1;
+    char buf[RAMDISK_BLOCK_SIZE];
+    if (read_blocks(0, lba, 1, buf) != 0) return -1;
+    // Ensure null termination
+    buf[RAMDISK_BLOCK_SIZE - 1] = '\0';
+    size_t copy = strnlen(buf, RAMDISK_BLOCK_SIZE) + 1;
+    if (copy > dst_len) copy = dst_len - 1;
+    memcpy(dst, buf, copy);
+    dst[copy] = '\0';
+    return 0;
 }
 

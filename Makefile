@@ -11,7 +11,7 @@ KERNEL_OBJ = $(BUILD_DIR)/kernel.o
 KERNEL_ELF = $(BUILD_DIR)/kernel.elf
 
 DRIVER_OBJS = $(BUILD_DIR)/vga.o $(BUILD_DIR)/serial.o
-LIB_OBJS = $(BUILD_DIR)/printf.o $(BUILD_DIR)/mem.o
+LIB_OBJS = $(BUILD_DIR)/printf.o $(BUILD_DIR)/mem.o $(BUILD_DIR)/strings.o
 CORE_OBJS = $(BUILD_DIR)/process.o
 CORE_OBJS += $(BUILD_DIR)/pmm.o
 CORE_OBJS += $(BUILD_DIR)/panic.o
@@ -41,6 +41,9 @@ $(BUILD_DIR)/printf.o: kernel/lib/printf.c | $(BUILD_DIR)
 
 $(BUILD_DIR)/mem.o: kernel/lib/mem.c | $(BUILD_DIR)
 	$(CC) -ffreestanding -Ikernel/lib/include -c -g kernel/lib/mem.c -o $(BUILD_DIR)/mem.o
+
+$(BUILD_DIR)/strings.o: kernel/lib/strings.c | $(BUILD_DIR)
+	$(CC) -ffreestanding -Ikernel/lib/include -c -g kernel/lib/strings.c -o $(BUILD_DIR)/strings.o
 
 $(BUILD_DIR)/process.o: kernel/core/process.c | $(BUILD_DIR)
 	$(CC) -ffreestanding -c -g kernel/core/process.c -o $(BUILD_DIR)/process.o

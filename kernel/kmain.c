@@ -45,5 +45,23 @@ void kmain(void *mb_info) {
         serial_write("[kernel] fs_init failed\n");
     }
 
+    /* Store and read back a test string on the ramdisk */
+    const char *msg = "hello world\n";
+    if (fs_write_string(0, msg) == 0) {
+        serial_write("[kernel] wrote message to disk\n");
+    } else {
+        serial_write("[kernel] failed to write message to disk\n");
+    }
+
+    char buf[128];
+    if (fs_read_string(0, buf, sizeof(buf)) == 0) {
+        serial_write("[kernel] read from disk: ");
+        serial_write(buf);
+        serial_write("\n");
+        printf("[kernel] read from disk: %s\n", buf);
+    } else {
+        serial_write("[kernel] failed to read from disk\n");
+    }
+
     parent.entry_point();
 }
